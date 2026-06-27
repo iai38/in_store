@@ -1,0 +1,467 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Audium — технический пилот речевой аналитики офлайн-точек</title>
+<meta name="description" content="Бесплатный технический пилот Audium: тестируем качество записи и AI-анализа разговоров с клиентами в офлайн-точках. Ни к чему не обязывает.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --zima:#1fb8ed; --zima-hover:#1aa6d4; --zima-soft:rgba(31,184,237,.1); --zima-softer:rgba(31,184,237,.05);
+  --white:#fff; --bg:#fff; --bg2:#f7f8f9; --fg:#000; --fg-muted:#6b7280; --fg-soft:rgba(0,0,0,.8);
+  --border:#e5e5e5; --sky50:#f0f9ff;
+  --font:'Roboto',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  --radius:8px; --radius-lg:12px; --radius-xl:16px; --radius-full:9999px;
+  --shadow-sm:0 1px 2px 0 rgb(0 0 0/.05); --shadow-md:0 4px 6px -1px rgb(0 0 0/.1);
+  --shadow-lg:0 10px 15px -3px rgb(0 0 0/.1); --shadow-xl:0 20px 25px -5px rgb(0 0 0/.1);
+  --ease:cubic-bezier(.4,0,.2,1); --t:200ms var(--ease);
+  --max:1100px;
+}
+*{box-sizing:border-box}
+button{font-family:inherit;border:none;background:none;cursor:pointer}
+html,body{margin:0;padding:0;font-family:var(--font);font-size:16px;line-height:1.5;color:var(--fg);background:var(--bg);-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+h1,h2,h3,h4{font-weight:700;line-height:1.1;letter-spacing:-.01em;margin:0}
+h1{font-size:clamp(34px,5vw,56px)}
+h2{font-size:clamp(28px,4vw,38px)}
+h3{font-size:20px;line-height:1.25}
+p{margin:0;line-height:1.6}
+a{color:inherit;text-decoration:none;transition:color var(--t)}
+.muted{color:var(--fg-muted)}
+.container{max-width:var(--max);margin-inline:auto;padding-inline:20px}
+section{padding:64px 0}
+@media(min-width:768px){section{padding:88px 0}}
+.bg2{background:var(--bg2)}
+
+/* header */
+header.site{position:sticky;top:0;z-index:50;background:rgba(255,255,255,.85);backdrop-filter:blur(8px);border-bottom:1px solid var(--border)}
+.hrow{display:flex;align-items:center;justify-content:space-between;height:64px}
+.logo{font-weight:700;font-size:22px;letter-spacing:-.02em}
+.logo .dot{color:var(--zima)}
+.hbtn{display:inline-flex;align-items:center;gap:8px;font-weight:500;font-size:15px;padding:9px 16px;border-radius:var(--radius);background:var(--zima);color:#fff;transition:background var(--t),transform var(--t)}
+.hbtn:hover{background:var(--zima-hover);color:#fff}
+@media(max-width:560px){.hbtn{display:none}}
+
+/* hero */
+.hero{background:linear-gradient(180deg,#fff 0%,var(--sky50) 55%,#fff 100%);text-align:center;padding:72px 0 64px}
+.badge{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:500;color:var(--zima);background:var(--zima-soft);padding:6px 14px;border-radius:var(--radius-full);margin-bottom:24px}
+.hero h1{max-width:880px;margin:0 auto 20px}
+.rotate{color:var(--zima);white-space:nowrap}
+.rotate-word{color:var(--zima)}
+.caret{display:inline-block;width:3px;height:.95em;background:var(--zima);margin-left:4px;vertical-align:-0.08em;border-radius:2px;animation:blink 1s steps(1) infinite}
+@keyframes blink{0%,50%{opacity:1}50.01%,100%{opacity:0}}
+@media (prefers-reduced-motion:reduce){.caret{animation:none}}
+.hero .sub{max-width:680px;margin:0 auto 18px;font-size:clamp(17px,2.2vw,20px);color:var(--fg-soft)}
+.hero .micro{font-size:14px;color:var(--fg-muted);margin-bottom:32px}
+.cta{display:inline-flex;align-items:center;justify-content:center;gap:10px;padding:16px 32px;font-size:18px;font-weight:600;color:#fff;border-radius:var(--radius-xl);background:linear-gradient(90deg,var(--zima),rgba(31,184,237,.82));box-shadow:var(--shadow-lg);transition:transform var(--t),box-shadow var(--t)}
+.cta:hover{transform:scale(1.05);box-shadow:var(--shadow-xl);color:#fff}
+.cta-row{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;align-items:center}
+.cta-note{font-size:13px;color:var(--fg-muted);margin-top:14px}
+
+/* waveform */
+.wave{display:flex;align-items:center;justify-content:center;gap:4px;height:44px;width:240px;margin:0 auto 28px}
+.wave .bar{width:4px;background:var(--zima);border-radius:9999px;opacity:.85;animation:wave 1.2s ease-in-out infinite}
+@keyframes wave{0%,100%{height:18%}50%{height:100%}}
+
+/* section title */
+.stitle{text-align:center;max-width:720px;margin:0 auto 48px}
+.stitle h2{margin-bottom:14px}
+.stitle p{font-size:18px;color:var(--fg-muted)}
+
+/* grids */
+.grid{display:grid;gap:20px}
+.g2{grid-template-columns:1fr}
+.g3{grid-template-columns:1fr}
+.g4{grid-template-columns:1fr 1fr}
+@media(min-width:768px){.g2{grid-template-columns:1fr 1fr}.g3{grid-template-columns:repeat(3,1fr)}.g4{grid-template-columns:repeat(4,1fr)}}
+
+/* card */
+.card{background:#fff;border:1px solid var(--border);border-radius:var(--radius-lg);padding:24px;transition:transform var(--t),box-shadow var(--t)}
+.card.lift:hover{transform:translateY(-2px);box-shadow:var(--shadow-lg)}
+.chip{width:48px;height:48px;border-radius:var(--radius);background:var(--zima-soft);display:flex;align-items:center;justify-content:center;margin-bottom:16px}
+.chip svg{width:24px;height:24px;color:var(--zima);stroke:var(--zima)}
+.card h3{margin-bottom:8px}
+.card p{color:var(--fg-soft);font-size:15px}
+
+/* what-we-do split */
+.split{display:grid;gap:32px;align-items:center;grid-template-columns:1fr}
+@media(min-width:860px){.split{grid-template-columns:1.05fr .95fr}}
+.flow{background:#fff;border:1px solid var(--border);border-radius:var(--radius-lg);padding:28px}
+.flow .step{display:flex;gap:14px;align-items:flex-start;padding:14px 0}
+.flow .step+.step{border-top:1px solid var(--border)}
+.flow .num{flex:0 0 32px;width:32px;height:32px;border-radius:var(--radius-full);background:var(--zima-soft);color:var(--zima);font-weight:600;display:flex;align-items:center;justify-content:center;font-size:14px}
+.flow .step b{display:block;font-weight:600;margin-bottom:2px}
+.flow .step span{font-size:14px;color:var(--fg-muted)}
+
+/* requirement list */
+.req{display:flex;gap:14px;align-items:flex-start;padding:16px 0}
+.req+.req{border-top:1px solid var(--border)}
+.req .ic{flex:0 0 24px;color:var(--zima)}
+.req .ic svg{width:24px;height:24px;stroke:var(--zima)}
+.req b{font-weight:600}
+.req p{font-size:15px;color:var(--fg-soft);margin-top:2px}
+.reqwrap{max-width:760px;margin:0 auto;background:#fff;border:1px solid var(--border);border-radius:var(--radius-lg);padding:8px 28px}
+
+/* safety */
+.safe{display:flex;gap:14px;align-items:flex-start}
+.safe .ic{flex:0 0 24px;color:var(--zima)}
+.safe .ic svg{width:24px;height:24px;stroke:var(--zima)}
+.safe b{font-weight:600;display:block;margin-bottom:4px}
+.safe p{font-size:15px;color:var(--fg-soft)}
+
+/* steps timeline */
+.steps{counter-reset:s;display:grid;gap:20px;grid-template-columns:1fr}
+@media(min-width:768px){.steps{grid-template-columns:repeat(5,1fr)}}
+.tstep{text-align:center;position:relative;padding-top:8px}
+.tstep .circle{width:56px;height:56px;border-radius:var(--radius-full);background:var(--zima-soft);color:var(--zima);font-weight:700;font-size:20px;display:flex;align-items:center;justify-content:center;margin:0 auto 14px}
+.tstep b{display:block;font-weight:600;margin-bottom:4px;font-size:15px}
+.tstep p{font-size:13px;color:var(--fg-muted)}
+
+/* bonus */
+.bonus{background:var(--zima-softer);border:1px solid var(--zima-soft);border-radius:var(--radius-xl);padding:36px 28px}
+.bonus .grid{margin-top:8px}
+.bonus .bcard{background:#fff;border:1px solid var(--border);border-radius:var(--radius-lg);padding:24px}
+.bonus .bcard .chip{margin-bottom:14px}
+.bonus .bcard h3{margin-bottom:6px}
+.bonus .bcard p{font-size:15px;color:var(--fg-soft)}
+.bonus .tag{display:inline-block;font-size:13px;font-weight:600;color:var(--zima);background:#fff;border:1px solid var(--zima-soft);padding:4px 12px;border-radius:var(--radius-full);margin-top:12px}
+
+/* about */
+.about{max-width:760px;margin:0 auto;text-align:center}
+.about p{color:var(--fg-soft);font-size:17px;margin-top:16px}
+
+/* final cta */
+.final{background:var(--zima-softer);text-align:center}
+.final h2{margin-bottom:14px}
+.final p{color:var(--fg-soft);font-size:18px;max-width:620px;margin:0 auto 28px}
+.contacts{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-top:8px}
+.contact{display:inline-flex;align-items:center;gap:10px;padding:14px 22px;border-radius:var(--radius-xl);font-weight:500;font-size:16px;border:1px solid var(--border);background:#fff;transition:transform var(--t),box-shadow var(--t),border-color var(--t)}
+.contact:hover{transform:translateY(-2px);box-shadow:var(--shadow-md);border-color:var(--zima)}
+.contact svg{width:20px;height:20px;color:var(--zima);stroke:var(--zima)}
+.contact.tg{background:var(--zima);color:#fff;border-color:var(--zima)}
+.contact.tg svg{color:#fff;stroke:#fff;fill:#fff}
+.contact.tg:hover{background:var(--zima-hover);color:#fff}
+
+/* footer */
+footer.site{border-top:1px solid var(--border);padding:32px 0;font-size:14px;color:var(--fg-muted)}
+.frow{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px}
+.frow .logo{font-size:18px;color:var(--fg)}
+.disclaimer{font-size:12px;color:var(--fg-muted);max-width:620px;margin-top:8px;line-height:1.5}
+
+/* modal */
+.modal-overlay{position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.5);backdrop-filter:blur(2px);display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;visibility:hidden;transition:opacity var(--t),visibility var(--t)}
+.modal-overlay.open{opacity:1;visibility:visible}
+.modal{background:#fff;border-radius:var(--radius-xl);max-width:440px;width:100%;padding:32px 28px;box-shadow:var(--shadow-xl);transform:translateY(8px) scale(.98);transition:transform var(--t);position:relative;text-align:center}
+.modal-overlay.open .modal{transform:translateY(0) scale(1)}
+.modal .close{position:absolute;top:14px;right:14px;width:36px;height:36px;border:none;background:transparent;border-radius:var(--radius);cursor:pointer;color:var(--fg-muted);display:flex;align-items:center;justify-content:center;transition:background var(--t),color var(--t)}
+.modal .close:hover{background:var(--bg2);color:var(--fg)}
+.modal .close svg{width:22px;height:22px;stroke:currentColor}
+.modal .mwave{display:flex;align-items:center;justify-content:center;gap:3px;height:28px;width:120px;margin:0 auto 18px}
+.modal .mwave .bar{width:3px;background:var(--zima);border-radius:9999px;opacity:.85;animation:wave 1.2s ease-in-out infinite}
+.modal h3{font-size:22px;margin-bottom:8px}
+.modal .msub{font-size:15px;color:var(--fg-muted);margin-bottom:24px}
+.modal .contacts{flex-direction:column;gap:12px;margin-top:0}
+.modal .contact{width:100%;justify-content:center}
+</style>
+</head>
+<body>
+
+<header class="site">
+  <div class="container hrow">
+    <div class="logo">Audium<span class="dot">.</span></div>
+    <button type="button" class="hbtn" data-modal-open>Участвовать в пилоте</button>
+  </div>
+</header>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="container">
+    <div class="wave" id="wave"></div>
+    <div class="badge">Бесплатный технический пилот · ни к чему не обязывает</div>
+    <h1>Узнайте, что происходит у вас в <span class="rotate"><span id="rotateWord" class="rotate-word"></span><span class="caret" aria-hidden="true"></span></span></h1>
+    <p class="sub">Audium записывает и анализирует разговоры персонала с клиентами в офлайн-точках — и превращает их в понятные выводы: что спрашивают, что предлагают, где теряются продажи.</p>
+    <p class="micro">Сейчас мы тестируем технологию в разных сферах и ищем несколько точек для пилота.</p>
+    <div class="cta-row">
+      <button type="button" class="cta" data-modal-open>Принять участие</button>
+    </div>
+    <p class="cta-note">Бесплатно · мы ставим и забираем оборудование сами · ваши процессы не меняются</p>
+  </div>
+</section>
+
+<!-- WHAT WE DO -->
+<section>
+  <div class="container">
+    <div class="stitle">
+      <h2>Что мы делаем</h2>
+      <p>Микрофон у точки обслуживания → AI расшифровывает разговоры → вы видите реальную картину вместо догадок.</p>
+    </div>
+    <div class="split">
+      <div>
+        <p style="font-size:17px;color:var(--fg-soft);margin-bottom:16px">В онлайне каждый звонок и чат можно проанализировать. В офлайне — самое ценное общение с клиентом происходит вживую и нигде не фиксируется. Audium закрывает эту слепую зону.</p>
+        <p style="font-size:17px;color:var(--fg-soft)">На этапе пилота наша цель — чисто техническая: проверить качество записи и анализа в вашей среде. <b>Никаких продаж, никаких обязательств.</b> Результат вы получаете бесплатно.</p>
+      </div>
+      <div class="flow">
+        <div class="step"><div class="num">1</div><div><b>Запись</b><span>Компактный микрофон в зоне общения с клиентом</span></div></div>
+        <div class="step"><div class="num">2</div><div><b>Распознавание</b><span>Речь автоматически переводится в текст с разделением на реплики</span></div></div>
+        <div class="step"><div class="num">3</div><div><b>AI-анализ</b><span>Система выделяет темы, вопросы клиентов, соблюдение стандартов</span></div></div>
+        <div class="step"><div class="num">4</div><div><b>Выводы</b><span>Вы получаете наглядный отчёт с инсайтами по вашей точке</span></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- VALUE -->
+<section class="bg2">
+  <div class="container">
+    <div class="stitle">
+      <h2>Что это показывает</h2>
+      <p>Когда продукт заработает на вашей точке, вы сможете увидеть то, что раньше было недоступно.</p>
+    </div>
+    <div class="grid g4">
+      <div class="card lift">
+        <div class="chip"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg></div>
+        <h3>Соблюдение стандартов</h3>
+        <p>Действительно ли сотрудники работают по скриптам и стандартам сервиса.</p>
+      </div>
+      <div class="card lift">
+        <div class="chip"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8.625 12a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H8.25m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H12m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 0 1-2.555-.337A5.972 5.972 0 0 1 5.41 20.97a5.969 5.969 0 0 1-.474-.065 4.48 4.48 0 0 0 .978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25Z"/></svg></div>
+        <h3>Что спрашивают клиенты</h3>
+        <p>Реальные вопросы и запросы — сколько раз и о чём, без искажений «на словах».</p>
+      </div>
+      <div class="card lift">
+        <div class="chip"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18 9 11.25l4.306 4.306a11.95 11.95 0 0 1 5.814-5.518l2.74-1.22m0 0-5.94-2.281m5.94 2.28-2.28 5.941"/></svg></div>
+        <h3>Упущенный спрос</h3>
+        <p>Что клиенты спрашивают, а у вас этого нет — или есть, но не предлагают.</p>
+      </div>
+      <div class="card lift">
+        <div class="chip"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z"/></svg></div>
+        <h3>Реальная картина</h3>
+        <p>Цифры и динамика вместо догадок — основа для решений по сервису и ассортименту.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- WHAT WE NEED FROM YOU -->
+<section>
+  <div class="container">
+    <div class="stitle">
+      <h2>Что требуется от вас</h2>
+      <p>Почти ничего. Участие в пилоте занимает минимум вашего времени и не затрагивает работу персонала.</p>
+    </div>
+    <div class="reqwrap">
+      <div class="req">
+        <div class="ic"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z"/></svg></div>
+        <div><b>Место для микрофона</b><p>Небольшое пространство у точки контакта с клиентом и розетка поблизости.</p></div>
+      </div>
+      <div class="req">
+        <div class="ic"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5"/></svg></div>
+        <div><b>Несколько дней</b><p>Оборудование стоит на точке ограниченное время — обычно несколько дней.</p></div>
+      </div>
+      <div class="req">
+        <div class="ic"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3v11.25A2.25 2.25 0 0 0 6 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0 1 18 16.5h-2.25m-7.5 0h7.5m-7.5 0-1 3m8.5-3 1 3m0 0 .5 1.5m-.5-1.5h-9.5m0 0-.5 1.5M9 11.25v1.5M12 9v3.75m3-6v6"/></svg></div>
+        <div><b>Табличка об аудиозаписи</b><p>Разместим заметное уведомление для клиентов — всё прозрачно и по закону.</p></div>
+      </div>
+      <div class="req">
+        <div class="ic"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/></svg></div>
+        <div><b>И всё</b><p>Сотрудникам ничего настраивать не нужно. Установку и снятие берём на себя.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SAFETY -->
+<section class="bg2">
+  <div class="container">
+    <div class="stitle">
+      <h2>Это безопасно и законно</h2>
+      <p>Мы понимаем, что запись разговоров — чувствительная тема. Поэтому всё построено прозрачно.</p>
+    </div>
+    <div class="grid g2" style="max-width:900px;margin:0 auto">
+      <div class="card">
+        <div class="safe"><div class="ic"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z"/></svg></div><div><b>Данные хранятся в России</b><p>Вся обработка и хранение — на российской инфраструктуре, в соответствии с 152-ФЗ.</p></div></div>
+      </div>
+      <div class="card">
+        <div class="safe"><div class="ic"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z"/></svg></div><div><b>Вы — владелец данных</b><p>Записи и выводы по вашей точке принадлежат вам. Мы не передаём их третьим лицам.</p></div></div>
+      </div>
+      <div class="card">
+        <div class="safe"><div class="ic"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/></svg></div><div><b>Прозрачно для клиентов</b><p>Уведомление о записи на видном месте. Никакой скрытой записи.</p></div></div>
+      </div>
+      <div class="card">
+        <div class="safe"><div class="ic"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"/></svg></div><div><b>Удалим после пилота</b><p>По вашему желанию все записи пилота удаляются после получения результатов.</p></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT GOES -->
+<section>
+  <div class="container">
+    <div class="stitle">
+      <h2>Как проходит пилот</h2>
+      <p>Коротко и без нагрузки на вас. От договорённости до результата — несколько дней.</p>
+    </div>
+    <div class="steps">
+      <div class="tstep"><div class="circle">1</div><b>Договорились</b><p>Согласуем точку и сроки, отвечаем на вопросы</p></div>
+      <div class="tstep"><div class="circle">2</div><b>Установили</b><p>Ставим микрофон за 15 минут, не мешая работе</p></div>
+      <div class="tstep"><div class="circle">3</div><b>Записали</b><p>Несколько дней система собирает разговоры</p></div>
+      <div class="tstep"><div class="circle">4</div><b>Забрали</b><p>Снимаем оборудование, точка возвращается к обычной жизни</p></div>
+      <div class="tstep"><div class="circle">5</div><b>Показали</b><p>Готовим и отдаём вам разбор по вашей точке</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- BONUS -->
+<section class="bg2">
+  <div class="container">
+    <div class="bonus">
+      <div class="stitle" style="margin-bottom:24px">
+        <h2>Что вы получаете за участие</h2>
+        <p>Даже на этапе теста участие в пилоте — это выгода для вас, а не одолжение нам.</p>
+      </div>
+      <div class="grid g2">
+        <div class="bcard">
+          <div class="chip"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z"/></svg></div>
+          <h3>Бесплатный разбор ваших разговоров</h3>
+          <p>Всё, что мы запишем за время пилота, вы получаете в виде наглядного отчёта: инфографика, инсайты, выводы и анализ по вашей точке. Это ваше — независимо от того, продолжите вы или нет.</p>
+          <span class="tag">Бесплатно · сразу после пилота</span>
+        </div>
+        <div class="bcard">
+          <div class="chip"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 11.25v8.25a1.5 1.5 0 0 1-1.5 1.5H5.25a1.5 1.5 0 0 1-1.5-1.5v-8.25M12 4.875A2.625 2.625 0 1 0 9.375 7.5H12m0-2.625V7.5m0-2.625A2.625 2.625 0 1 1 14.625 7.5H12m0 0V21m-8.625-9.75h18c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125h-18c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125Z"/></svg></div>
+          <h3>До 3 месяцев бесплатно при запуске</h3>
+          <p>Если после пилота решите подключиться — участники пилота получают до 3 месяцев бесплатного обслуживания. Спасибо, что помогаете нам сделать продукт лучше.</p>
+          <span class="tag">До 3 месяцев · при подключении</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ABOUT -->
+<section>
+  <div class="container">
+    <div class="about">
+      <h2>Кто за этим стоит</h2>
+      <p>Audium — российский продукт для транскрибации и AI-анализа разговоров. Мы уже помогаем бизнесу разбирать звонки и встречи, а теперь развиваем направление офлайн-точек, где живое общение с клиентом до сих пор оставалось «слепой зоной».</p>
+    </div>
+  </div>
+</section>
+
+<!-- FINAL CTA / CONTACTS -->
+<section class="final" id="contacts">
+  <div class="container">
+    <h2>Готовы поучаствовать?</h2>
+    <p>Напишите мне удобным способом — расскажу детали, отвечу на вопросы и согласуем сроки. Участие бесплатное и ни к чему не обязывает.</p>
+    <div class="contacts">
+      <a class="contact tg" href="https://t.me/alex_is1" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>
+        Telegram — @alex_is1
+      </a>
+      <a class="contact" href="mailto:ai@audium.pro">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75"/></svg>
+        ai@audium.pro
+      </a>
+    </div>
+  </div>
+</section>
+
+<footer class="site">
+  <div class="container">
+    <div class="frow">
+      <div class="logo">Audium<span class="dot" style="color:var(--zima)">.</span></div>
+      <div>ai@audium.pro · <a href="https://t.me/alex_is1" target="_blank" rel="noopener">@alex_is1</a></div>
+    </div>
+    <p class="disclaimer">Технический пилот проводится бесплатно и не является публичной офертой. Запись разговоров осуществляется с уведомлением посетителей. Обработка и хранение данных — на российской инфраструктуре в соответствии с требованиями законодательства РФ.<br>ИП Исайченко А.И. · ИНН 380103212158</p>
+  </div>
+</footer>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="contactModal" aria-hidden="true">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <button type="button" class="close" data-modal-close aria-label="Закрыть">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/></svg>
+    </button>
+    <div class="mwave" id="mwave"></div>
+    <h3 id="modalTitle">Давайте познакомимся</h3>
+    <p class="msub">Напишите удобным способом — расскажу детали, отвечу на вопросы и согласуем сроки. Участие бесплатное и ни к чему не обязывает.</p>
+    <div class="contacts">
+      <a class="contact tg" href="https://t.me/alex_is1" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>
+        Telegram — @alex_is1
+      </a>
+      <a class="contact" href="mailto:ai@audium.pro">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75"/></svg>
+        ai@audium.pro
+      </a>
+    </div>
+  </div>
+</div>
+
+<script>
+  // rotating hero noun (typewriter)
+  (function(){
+    var words = ['магазине','салоне','сервисе','кафе','ресторане','клинике','шоу-руме'];
+    var el = document.getElementById('rotateWord');
+    if(!el) return;
+    var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var idx = 0;
+
+    if(reduce){
+      // no typing animation — just swap the full word every 5s
+      el.textContent = words[0];
+      setInterval(function(){ idx=(idx+1)%words.length; el.textContent=words[idx]; }, 5000);
+      return;
+    }
+
+    var typeSpeed = 90, eraseSpeed = 45, holdTime = 5000;
+    function typeWord(word, done){
+      var i = 0;
+      (function step(){
+        el.textContent = word.slice(0, i);
+        if(i <= word.length){ i++; setTimeout(step, typeSpeed); }
+        else done();
+      })();
+    }
+    function eraseWord(word, done){
+      var i = word.length;
+      (function step(){
+        el.textContent = word.slice(0, i);
+        if(i >= 0){ i--; setTimeout(step, eraseSpeed); }
+        else done();
+      })();
+    }
+    function cycle(){
+      var word = words[idx];
+      typeWord(word, function(){
+        setTimeout(function(){
+          eraseWord(word, function(){
+            idx = (idx+1) % words.length;
+            cycle();
+          });
+        }, holdTime);
+      });
+    }
+    cycle();
+  })();
+
+  // waveform bars (hero)
+  var w = document.getElementById('wave');
+  for (var i=0;i<24;i++){ var b=document.createElement('div'); b.className='bar'; b.style.animationDelay=(i*0.08)+'s'; w.appendChild(b); }
+
+  // waveform bars (modal)
+  var mw = document.getElementById('mwave');
+  for (var j=0;j<14;j++){ var mb=document.createElement('div'); mb.className='bar'; mb.style.animationDelay=(j*0.08)+'s'; mw.appendChild(mb); }
+
+  // modal logic
+  var overlay = document.getElementById('contactModal');
+  function openModal(){ overlay.classList.add('open'); overlay.setAttribute('aria-hidden','false'); document.body.style.overflow='hidden'; }
+  function closeModal(){ overlay.classList.remove('open'); overlay.setAttribute('aria-hidden','true'); document.body.style.overflow=''; }
+  document.querySelectorAll('[data-modal-open]').forEach(function(el){ el.addEventListener('click', openModal); });
+  document.querySelectorAll('[data-modal-close]').forEach(function(el){ el.addEventListener('click', closeModal); });
+  overlay.addEventListener('click', function(e){ if(e.target===overlay) closeModal(); });
+  document.addEventListener('keydown', function(e){ if(e.key==='Escape' && overlay.classList.contains('open')) closeModal(); });
+</script>
+</body>
+</html>
